@@ -24,9 +24,9 @@ public class Cat {
     private int scaledWidth;
     private int scaledHeight;
 
-    boolean textureFlip = false;
-    int currentX, currentY;
-    int newX, newY;
+    private boolean textureFlip = false;
+    private int currentX, currentY;
+    private int newX, newY;
 
     private static boolean animationsLoaded = false;
     private static Animation<Texture> deadAnimation  = null;
@@ -68,14 +68,14 @@ public class Cat {
     private float stateTime = 0;
 
     public enum CatState {
-        STANDING,
+        IDLE,
         WALK_TO,
         RUN_TO,
         EAT,
         DEAD,
         PUNCHED
     }
-    private CatState catState = CatState.STANDING;
+    private CatState catState = CatState.IDLE;
 
 
 
@@ -90,11 +90,11 @@ public class Cat {
         this.newY = y;
 
         healthBar = new HealthBar(50, 3, Color.GREEN, Color.BLACK);
-        healthBar.setRange(1f, 100f);
+        healthBar.setRange(0f, 100f);
         healthBar.setValue(health);
 
         fullnessBar = new HealthBar(50, 3, Color.BLUE, Color.BLACK);
-        fullnessBar.setRange(1f, 100f);
+        fullnessBar.setRange(0f, 100f);
         fullnessBar.setValue(fullness);
 
         if( !animationsLoaded ) {
@@ -238,19 +238,17 @@ public class Cat {
                     currentY = newY;
                 }
             }
-
-        } else {
-            changeCatState(CatState.STANDING);
-            changeAnimState(AnimState.IDLE_ANIMATION);
+            return false;
         }
         return true;
     }
 
-    private CatState oldCatState = CatState.STANDING;
+    private CatState oldCatState = CatState.IDLE;
     private void changeCatState(CatState newState) {
         oldCatState = catState;
         stateTime = 0;
         catState = newState;
+        System.out.println("Old cat state: " + oldCatState + ", State: " + newState);
     }
 
 
@@ -259,6 +257,7 @@ public class Cat {
         oldAnimState = animState;
         stateTime = 0;
         animState = newState;
+        System.out.println("Old anim state: " + oldAnimState + ", State: " + newState);
     }
 
 
@@ -280,32 +279,21 @@ public class Cat {
 
 
         switch(catState) {
-            case STANDING:
+            case IDLE:
                 break;
 
             case WALK_TO:
-                if((currentX != newX) || (currentY != newY)) {
-                    if (currentX < newX) {
-                        currentX++;
-                        textureFlip = false;
-                    } else if(currentX > newX) {
-                        currentX--;
-                        textureFlip = true;
-                    }
-
-                    if (currentY < newY) {
-                        currentY++;
-                    } else if(currentY > newY) {
-                        currentY--;
-                    }
-                } else {
-                    changeCatState(CatState.STANDING);
+                if (moveTo(false)) {
+                    changeCatState(CatState.IDLE);
                     changeAnimState(AnimState.IDLE_ANIMATION);
                 }
                 break;
 
             case RUN_TO:
-
+                if (moveTo(true)) {
+                    changeCatState(CatState.IDLE);
+                    changeAnimState(AnimState.IDLE_ANIMATION);
+                }
                 break;
 
             case PUNCHED:

@@ -86,7 +86,7 @@ public class MyGdxGame extends ApplicationAdapter {
             timer = System.currentTimeMillis();
 
             for (int i = 0; i < cats.size; i++) {
-                if (cats.get(i).getCatState() == Cat.CatState.STANDING) {
+                if (cats.get(i).getCatState() == Cat.CatState.IDLE) {
                     cats.get(i).goTo(rand.nextInt(400), rand.nextInt(400), rand.nextBoolean());
                 }
             }
