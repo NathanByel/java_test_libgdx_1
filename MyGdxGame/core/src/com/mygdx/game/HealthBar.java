@@ -31,11 +31,11 @@ public class HealthBar extends ProgressBar {
      * @param width of the health bar
      * @param height of the health bar
      */
-    public HealthBar(int width, int height) {
+    public HealthBar(int width, int height, Color color, Color backColor) {
         super(0f, 1f, 0.01f, false, new ProgressBarStyle());
-        getStyle().background = getColoredDrawable(width, height, Color.BLACK);
-        getStyle().knob = getColoredDrawable(0, height, Color.GREEN);
-        getStyle().knobBefore = getColoredDrawable(width, height, Color.GREEN);
+        getStyle().background = getColoredDrawable(width, height, backColor);
+        getStyle().knob = getColoredDrawable(0, height, color);
+        getStyle().knobBefore = getColoredDrawable(width, height, color);
 
         setWidth(width);
         setHeight(height);

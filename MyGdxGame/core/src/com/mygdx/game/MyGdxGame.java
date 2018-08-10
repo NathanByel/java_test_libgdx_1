@@ -4,9 +4,7 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.scenes.scene2d.ui.ProgressBar;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 
@@ -14,12 +12,9 @@ import java.util.Random;
 
 public class MyGdxGame extends ApplicationAdapter {
 	SpriteBatch batch;
-	//Cat[] cats = new Cat[5];
 	Random rand = new Random();
 
 	Array<Cat> cats = new Array<Cat>();
-
-
 	long timer = 0;
 
     // Пул для пуль.
@@ -30,24 +25,14 @@ public class MyGdxGame extends ApplicationAdapter {
         }
     };
 
-    HealthBar healthBar;
 	@Override
 	public void create () {
-        healthBar = new HealthBar(100, 3);
-        healthBar.setPosition(10, Gdx.graphics.getHeight() - 20);
-        //healthBar.setRange(1f, 100f);
-        healthBar.setValue(1f);
-
 		batch = new SpriteBatch();
 
 		for (int i = 0; i < 5; i++) {
             catPool.obtain();
-			cats.add( new Cat(rand.nextInt(400), rand.nextInt(400)) );
-
-			//cats[i].goTo(rand.nextInt(400), rand.nextInt(400));
+            cats.add( new Cat(rand.nextInt(400), rand.nextInt(400)) );
 		}
-
-
 
 		/*while(true) {
 			try {
@@ -66,33 +51,45 @@ public class MyGdxGame extends ApplicationAdapter {
 	}
 
 	long lastUpdate;
+	static boolean oldButtonState;
 	@Override
 	public void render () {
+        /*long dt = System.currentTimeMillis() - lastUpdate;
+        lastUpdate = System.currentTimeMillis();*/
 
         // Убиваем котов
         if(Gdx.input.isButtonPressed(Input.Buttons.LEFT)){
-            for (int i = 0; i < cats.size; i++) {
-                if( cats.get(i).isCat(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()) ) {
-                    cats.get(i).setState(Cat.CAT_STATE_DEAD);
+            if(!oldButtonState) {
+                oldButtonState = true;
+
+                for (int i = 0; i < cats.size; i++) {
+                    if( cats.get(i).isCat(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()) ) {
+                        //cats.get(i).setState(Cat.CAT_STATE_DEAD);
+                        cats.get(i).punch(20);
+                        //break;
+                    }
                 }
+
             }
+        } else {
+            oldButtonState = false;
         }
 
         // Создаем котов
         if(Gdx.input.isButtonPressed(Input.Buttons.RIGHT)){
             cats.add( new Cat(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()) );
+
         }
 
+        // Если кот стоит, отправляем его в случайную точку
         if(System.currentTimeMillis() > timer + 2000) {
             timer = System.currentTimeMillis();
 
             for (int i = 0; i < cats.size; i++) {
-                if (cats.get(i).getCatState() == Cat.CAT_STATE_STANDING) {
-                    cats.get(i).goTo(rand.nextInt(400), rand.nextInt(400));
+                if (cats.get(i).getCatState() == Cat.CatState.STANDING) {
+                    cats.get(i).goTo(rand.nextInt(400), rand.nextInt(400), rand.nextBoolean());
                 }
             }
-
-            healthBar.setValue(healthBar.getValue() - 0.1f);
         }
 
 
@@ -103,13 +100,6 @@ public class MyGdxGame extends ApplicationAdapter {
 		for (Cat cat: cats) {
 			cat.render(batch);
 		}
-
-		long dt = System.currentTimeMillis() - lastUpdate;
-        lastUpdate = System.currentTimeMillis();
-
-        healthBar.act(dt);
-        healthBar.draw(batch, 1f);
-
 		batch.end();
 	}
 	

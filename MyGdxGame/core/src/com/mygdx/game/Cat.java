@@ -1,26 +1,25 @@
 package com.mygdx.game;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Array;
 
 public class Cat {
-    public static final int CAT_STATE_STANDING    = 0;
-    public static final int CAT_STATE_WALK        = 1;
-    public static final int CAT_STATE_GO_TO       = 2;
-    public static final int CAT_STATE_EAT         = 3;
-    public static final int CAT_STATE_DEAD        = 4;
+    private int fullness = 100;
+    private int health = 100;
+    private int hungerSpeed = 1;
 
+    private HealthBar healthBar;
+    private HealthBar fullnessBar;
 
-    private HealthBar healthBar = new HealthBar(50, 3);
     private boolean catIsAlive = true;
     private static final float SCALE_FACTOR = 0.2f;
 
-    private int catState = CAT_STATE_STANDING;
-    Texture currentFrame;
-
+    private Texture currentFrame;
+    private long timer = 0;
 
     private int scaledWidth;
     private int scaledHeight;
@@ -39,10 +38,46 @@ public class Cat {
     private static Animation<Texture> slideAnimation = null;
     private static Animation<Texture> walkAnimation  = null;
 
-    float stateTime = 0;
+    private enum AnimState {
+        DEAD_ANIMATION,
+        FALL_ANIMATION,
+        HURT_ANIMATION,
+        IDLE_ANIMATION,
+        JUMP_ANIMATION,
+        RUN_ANIMATION,
+        SLIDE_ANIMATION,
+        WALK_ANIMATION
+    }
+    /*private enum AnimState {
+        DEAD_ANIMATION( deadAnimation.getKeyFrame(this.stateTime, false)),
+        FALL_ANIMATION,
+        HURT_ANIMATION,
+        IDLE_ANIMATION,
+        JUMP_ANIMATION,
+        RUN_ANIMATION,
+        SLIDE_ANIMATION,
+        WALK_ANIMATION;
+
+        private float stateTime;
+        private Texture getFrame(float stateTime) {
+            this.stateTime = stateTime;
+        }
+    }*/
+
+    private AnimState animState = AnimState.IDLE_ANIMATION;
+    private float stateTime = 0;
+
+    public enum CatState {
+        STANDING,
+        WALK_TO,
+        RUN_TO,
+        EAT,
+        DEAD,
+        PUNCHED
+    }
+    private CatState catState = CatState.STANDING;
 
 
-    int pointX, pointY;
 
     public Cat() {
         this(0,0);
@@ -53,6 +88,14 @@ public class Cat {
         this.currentY = y;
         this.newX = x;
         this.newY = y;
+
+        healthBar = new HealthBar(50, 3, Color.GREEN, Color.BLACK);
+        healthBar.setRange(1f, 100f);
+        healthBar.setValue(health);
+
+        fullnessBar = new HealthBar(50, 3, Color.BLUE, Color.BLACK);
+        fullnessBar.setRange(1f, 100f);
+        fullnessBar.setValue(fullness);
 
         if( !animationsLoaded ) {
             animationsLoaded = true;
@@ -108,10 +151,34 @@ public class Cat {
         }
     }
 
-    public void goTo(int x, int y) {
+
+    public void punch(int damage) {
+        if(health > 0) {
+            stateTime = 0;
+            int dl = health - damage;
+            if (dl > 0) {
+                health = dl;
+                changeCatState(CatState.PUNCHED);
+                changeAnimState(AnimState.HURT_ANIMATION);
+            } else {
+                health = 0;
+                changeCatState(CatState.DEAD);
+                changeAnimState(AnimState.DEAD_ANIMATION);
+            }
+            System.out.printf("damage %d, health %d, dl %d\n", damage, health, dl);
+        }
+    }
+
+    public void goTo(int x, int y, boolean run) {
         this.newX = x;
         this.newY = y;
-        catState = CAT_STATE_GO_TO;
+        if (run) {
+            changeCatState(CatState.RUN_TO);
+            changeAnimState(AnimState.RUN_ANIMATION);
+        } else {
+            changeCatState(CatState.WALK_TO);
+            changeAnimState(AnimState.WALK_ANIMATION);
+        }
     }
 
     public boolean isCat(int x, int y) {
@@ -119,69 +186,104 @@ public class Cat {
                 (y >= currentY + scaledHeight/4) && (y <= currentY + scaledHeight - scaledHeight/4);
     }
 
-    boolean f = true;
-    int oldX=0;
     public void render(SpriteBatch batch) {
-        //batch.draw(walkFrames[0], 0, 0); //, 100, 100);
-
         stateTime += Gdx.graphics.getDeltaTime(); // #15
         update();
-        /*if(f) {
-            currentFrame = walkAnimation.getKeyFrame(stateTime, true);
-            //if( walkAnimation.isAnimationFinished(stateTime) ) {
-            //    f = false;
-            //    stateTime = 0;
-            //}
 
-            currentX += 2;
-            if(currentX > 400) {
-                currentX = 0;
-                oldX = 0;
-            }
-
-            if(currentX > oldX + 100) {
-                oldX = currentX;
-                f = false;
-                stateTime = 0;
-            }
-
-        } else {
-            currentFrame = deadAnimation.getKeyFrame(stateTime, false);
-            if( deadAnimation.isAnimationFinished(stateTime) ) {
-                f = true;
-                stateTime = 0;
-            }
-        }*/
-
-
-        //batch.draw(currentFrame, currentX, currentY, 100,100); // #17
         scaledWidth  = (int)(currentFrame.getWidth() * SCALE_FACTOR);
         scaledHeight = (int)(currentFrame.getHeight() * SCALE_FACTOR);
 
-        //healthBar.act(dt);
-        //healthBar.draw(batch, 1f);
+
+        healthBar.setPosition( currentX + scaledWidth/2 - healthBar.getWidth()/2, currentY + scaledHeight + fullnessBar.getHeight()+2);
+        healthBar.setValue(health);
+        healthBar.act(Gdx.graphics.getDeltaTime());
+        healthBar.draw(batch, 1f);
+
+        fullnessBar.setPosition( currentX + scaledWidth/2 - fullnessBar.getWidth()/2, currentY + scaledHeight);
+        fullnessBar.setValue(fullness);
+        fullnessBar.act(Gdx.graphics.getDeltaTime());
+        fullnessBar.draw(batch, 1f);
+
         batch.draw (currentFrame, currentX, currentY, scaledWidth, scaledHeight, 0, 0, currentFrame.getWidth(),
                 currentFrame.getHeight(), textureFlip, false);
     }
 
-    public void setState(int state) {
-        if(catIsAlive) {
-            stateTime = 0;
-            catState = state;
+    private boolean moveTo(boolean run) {
+        int stepSize = run ? 2 : 1;
+
+        if((currentX != newX) || (currentY != newY)) {
+            if (currentX < newX) {
+                currentX += stepSize;
+
+                if(currentX > newX) {
+                    currentX = newX;
+                }
+                textureFlip = false;
+            } else if(currentX > newX) {
+                currentX -= stepSize;
+                if(currentX < newX) {
+                    currentX = newX;
+                }
+                textureFlip = true;
+            }
+
+            if (currentY < newY) {
+                currentY += stepSize;
+                if(currentY > newY) {
+                    currentY = newY;
+                }
+            } else if(currentY > newY) {
+                currentY -= stepSize;
+                if(currentY < newY) {
+                    currentY = newY;
+                }
+            }
+
+        } else {
+            changeCatState(CatState.STANDING);
+            changeAnimState(AnimState.IDLE_ANIMATION);
         }
+        return true;
     }
 
+    private CatState oldCatState = CatState.STANDING;
+    private void changeCatState(CatState newState) {
+        oldCatState = catState;
+        stateTime = 0;
+        catState = newState;
+    }
+
+
+    private AnimState oldAnimState = AnimState.IDLE_ANIMATION;
+    private void changeAnimState(AnimState newState) {
+        oldAnimState = animState;
+        stateTime = 0;
+        animState = newState;
+    }
+
+
+
+
+
     public void update() {
+        if(System.currentTimeMillis() > timer + 1000) {
+            timer = System.currentTimeMillis();
+            if(fullness > 0) {
+                int df = fullness - hungerSpeed;
+                if(df > 0) {
+                    fullness = df;
+                } else {
+                    fullness = 0;
+                }
+            }
+        }
+
+
         switch(catState) {
-            case CAT_STATE_STANDING:
-                currentFrame = idleAnimation.getKeyFrame(stateTime, true);
+            case STANDING:
                 break;
 
-            case CAT_STATE_WALK:
-
-                break;
-
-            case CAT_STATE_GO_TO:
+            case WALK_TO:
                 if((currentX != newX) || (currentY != newY)) {
                     if (currentX < newX) {
                         currentX++;
@@ -196,41 +298,67 @@ public class Cat {
                     } else if(currentY > newY) {
                         currentY--;
                     }
-
-                    currentFrame = walkAnimation.getKeyFrame(stateTime, true);
                 } else {
-                    catState = CAT_STATE_STANDING;
-                    stateTime = 0;
+                    changeCatState(CatState.STANDING);
+                    changeAnimState(AnimState.IDLE_ANIMATION);
                 }
                 break;
 
-            case CAT_STATE_EAT:
+            case RUN_TO:
+
                 break;
 
-            case CAT_STATE_DEAD:
-                //catIsAlive = false;
-                //currentFrame = deadAnimation.getKeyFrame(stateTime, false);
-                /*
-                deadAnimation
-                fallAnimation
-                hurtAnimation
-                idleAnimation
-                jumpAnimation
-                runAnimation
-                slideAnimation
-                walkAnimation
-                */
-
-                currentFrame = slideAnimation.getKeyFrame(stateTime, false);
-                if(slideAnimation.isAnimationFinished(stateTime)) {
-                    stateTime = 0;
-                    catState = CAT_STATE_GO_TO;
+            case PUNCHED:
+                if(hurtAnimation.isAnimationFinished(stateTime)) {
+                    changeCatState(oldCatState);// CatState.GO_TO);
+                    changeAnimState(oldAnimState);// AnimState.WALK_ANIMATION);
                 }
+                break;
+
+            case EAT:
+                break;
+
+            case DEAD:
+                break;
+        }
+
+
+        switch (animState) {
+            case DEAD_ANIMATION:
+                currentFrame = deadAnimation.getKeyFrame(stateTime, false);
+                break;
+
+            case FALL_ANIMATION:
+                currentFrame = fallAnimation.getKeyFrame(stateTime, false);
+                break;
+
+            case HURT_ANIMATION:
+                currentFrame = hurtAnimation.getKeyFrame(stateTime, false);
+                break;
+
+            case IDLE_ANIMATION:
+                currentFrame = idleAnimation.getKeyFrame(stateTime, true);
+                break;
+
+            case JUMP_ANIMATION:
+                currentFrame = jumpAnimation.getKeyFrame(stateTime, false);
+                break;
+
+            case RUN_ANIMATION:
+                currentFrame = runAnimation.getKeyFrame(stateTime, true);
+                break;
+
+            case SLIDE_ANIMATION:
+                currentFrame = slideAnimation.getKeyFrame(stateTime, true);
+                break;
+
+            case WALK_ANIMATION:
+                currentFrame = walkAnimation.getKeyFrame(stateTime, true);
                 break;
         }
     }
 
-    public int getCatState() {
+    public CatState getCatState() {
         return catState;
     }
 }
