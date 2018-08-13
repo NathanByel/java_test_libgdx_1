@@ -18,7 +18,7 @@ public class Cat {
     private boolean catIsAlive = true;
     private static final float SCALE_FACTOR = 0.2f;
 
-    private Texture currentFrame;
+    private Animation<Texture> currentAnimation;
     private long timer = 0;
 
     private int scaledWidth;
@@ -38,16 +38,70 @@ public class Cat {
     private static Animation<Texture> slideAnimation = null;
     private static Animation<Texture> walkAnimation  = null;
 
+
+
     private enum AnimState {
-        DEAD_ANIMATION,
-        FALL_ANIMATION,
-        HURT_ANIMATION,
-        IDLE_ANIMATION,
-        JUMP_ANIMATION,
-        RUN_ANIMATION,
-        SLIDE_ANIMATION,
-        WALK_ANIMATION
+        DEAD_ANIMATION(deadAnimation),
+        FALL_ANIMATION(fallAnimation),
+        HURT_ANIMATION(hurtAnimation),
+        IDLE_ANIMATION(idleAnimation),
+        JUMP_ANIMATION(jumpAnimation),
+        RUN_ANIMATION(runAnimation),
+        SLIDE_ANIMATION(slideAnimation),
+        WALK_ANIMATION(walkAnimation);
+
+        AnimState(Animation anim) {
+            this.anim = anim;
+        }
+
+        private Animation<Texture> anim;
+        Animation<Texture> getAnimation() {
+            return anim;
+        }
     }
+
+    private class Anim {
+        boolean loop;
+        Animation<Texture> currentAnimation;
+        AnimState animState;
+
+        /*Texture getFrame() {
+            switch (animState) {
+                case DEAD_ANIMATION:
+                    currentFrame = deadAnimation.getKeyFrame(stateTime, false);
+                    break;
+
+                case FALL_ANIMATION:
+                    currentFrame = fallAnimation.getKeyFrame(stateTime, false);
+                    break;
+
+                case HURT_ANIMATION:
+                    currentFrame = hurtAnimation.getKeyFrame(stateTime, false);
+                    break;
+
+                case IDLE_ANIMATION:
+                    currentFrame = idleAnimation.getKeyFrame(stateTime, true);
+                    break;
+
+                case JUMP_ANIMATION:
+                    currentFrame = jumpAnimation.getKeyFrame(stateTime, false);
+                    break;
+
+                case RUN_ANIMATION:
+                    currentFrame = runAnimation.getKeyFrame(stateTime, true);
+                    break;
+
+                case SLIDE_ANIMATION:
+                    currentFrame = slideAnimation.getKeyFrame(stateTime, true);
+                    break;
+
+                case WALK_ANIMATION:
+                    currentFrame = walkAnimation.getKeyFrame(stateTime, true);
+                    break;
+            }
+        }*/
+    }
+
     /*private enum AnimState {
         DEAD_ANIMATION( deadAnimation.getKeyFrame(this.stateTime, false)),
         FALL_ANIMATION,
@@ -104,49 +158,49 @@ public class Cat {
             for (int i = 0; i < 10; i++) {
                 frames.add(new Texture(Gdx.files.internal("cat/Dead (" + (i + 1) + ").png")));
             }
-            deadAnimation = new Animation<Texture>(0.07f, frames);
+            deadAnimation = new Animation<Texture>(0.07f, frames, Animation.PlayMode.NORMAL);
             frames.clear();
 
             for (int i = 0; i < 8; i++) {
                 frames.add(new Texture(Gdx.files.internal("cat/Fall (" + (i + 1) + ").png")));
             }
-            fallAnimation = new Animation<Texture>(0.07f, frames);
+            fallAnimation = new Animation<Texture>(0.07f, frames, Animation.PlayMode.NORMAL);
             frames.clear();
 
             for (int i = 0; i < 10; i++) {
                 frames.add(new Texture(Gdx.files.internal("cat/Hurt (" + (i + 1) + ").png")));
             }
-            hurtAnimation = new Animation<Texture>(0.07f, frames);
+            hurtAnimation = new Animation<Texture>(0.07f, frames, Animation.PlayMode.NORMAL);
             frames.clear();
 
             for (int i = 0; i < 10; i++) {
                 frames.add(new Texture(Gdx.files.internal("cat/Idle (" + (i + 1) + ").png")));
             }
-            idleAnimation = new Animation<Texture>(0.1f, frames);
+            idleAnimation = new Animation<Texture>(0.1f, frames, Animation.PlayMode.LOOP);
             frames.clear();
 
             for (int i = 0; i < 8; i++) {
                 frames.add(new Texture(Gdx.files.internal("cat/Jump (" + (i + 1) + ").png")));
             }
-            jumpAnimation = new Animation<Texture>(0.1f, frames);
+            jumpAnimation = new Animation<Texture>(0.1f, frames, Animation.PlayMode.NORMAL);
             frames.clear();
 
             for (int i = 0; i < 8; i++) {
                 frames.add(new Texture(Gdx.files.internal("cat/Run (" + (i + 1) + ").png")));
             }
-            runAnimation = new Animation<Texture>(0.1f, frames);
+            runAnimation = new Animation<Texture>(0.1f, frames, Animation.PlayMode.LOOP);
             frames.clear();
 
             for (int i = 0; i < 10; i++) {
                 frames.add(new Texture(Gdx.files.internal("cat/Slide (" + (i + 1) + ").png")));
             }
-            slideAnimation = new Animation<Texture>(0.1f, frames);
+            slideAnimation = new Animation<Texture>(0.1f, frames, Animation.PlayMode.NORMAL);
             frames.clear();
 
             for (int i = 0; i < 10; i++) {
                 frames.add(new Texture(Gdx.files.internal("cat/Walk (" + (i + 1) + ").png")));
             }
-            walkAnimation = new Animation<Texture>(0.05f, frames);
+            walkAnimation = new Animation<Texture>(0.05f, frames, Animation.PlayMode.LOOP);
             frames.clear();
         }
     }
@@ -190,10 +244,6 @@ public class Cat {
         stateTime += Gdx.graphics.getDeltaTime(); // #15
         update();
 
-        scaledWidth  = (int)(currentFrame.getWidth() * SCALE_FACTOR);
-        scaledHeight = (int)(currentFrame.getHeight() * SCALE_FACTOR);
-
-
         healthBar.setPosition( currentX + scaledWidth/2 - healthBar.getWidth()/2, currentY + scaledHeight + fullnessBar.getHeight()+2);
         healthBar.setValue(health);
         healthBar.act(Gdx.graphics.getDeltaTime());
@@ -204,8 +254,15 @@ public class Cat {
         fullnessBar.act(Gdx.graphics.getDeltaTime());
         fullnessBar.draw(batch, 1f);
 
-        batch.draw (currentFrame, currentX, currentY, scaledWidth, scaledHeight, 0, 0, currentFrame.getWidth(),
-                currentFrame.getHeight(), textureFlip, false);
+        Texture currentFrame = currentAnimation.getKeyFrame(stateTime);
+        scaledWidth  = (int)(currentFrame.getWidth() * SCALE_FACTOR);
+        scaledHeight = (int)(currentFrame.getHeight() * SCALE_FACTOR);
+        batch.draw (currentFrame,
+                    currentX, currentY,
+                    scaledWidth, scaledHeight,
+                    0, 0,
+                    currentFrame.getWidth(), currentFrame.getHeight(),
+                    textureFlip, false);
     }
 
     private boolean moveTo(boolean run) {
@@ -249,6 +306,19 @@ public class Cat {
         stateTime = 0;
         catState = newState;
         System.out.println("Old cat state: " + oldCatState + ", State: " + newState);
+
+        switch(catState) {
+            case IDLE:      currentAnimation = idleAnimation;   break;
+            case WALK_TO:   currentAnimation = walkAnimation;   break;
+            case RUN_TO:    currentAnimation = runAnimation;    break;
+            case PUNCHED:   currentAnimation = hurtAnimation;   break;
+
+            case EAT:
+                break;
+
+            case DEAD:
+                break;
+        }
     }
 
 
@@ -285,21 +355,21 @@ public class Cat {
             case WALK_TO:
                 if (moveTo(false)) {
                     changeCatState(CatState.IDLE);
-                    changeAnimState(AnimState.IDLE_ANIMATION);
+                    //changeAnimState(AnimState.IDLE_ANIMATION);
                 }
                 break;
 
             case RUN_TO:
                 if (moveTo(true)) {
                     changeCatState(CatState.IDLE);
-                    changeAnimState(AnimState.IDLE_ANIMATION);
+                    //changeAnimState(AnimState.IDLE_ANIMATION);
                 }
                 break;
 
             case PUNCHED:
                 if(hurtAnimation.isAnimationFinished(stateTime)) {
                     changeCatState(oldCatState);// CatState.GO_TO);
-                    changeAnimState(oldAnimState);// AnimState.WALK_ANIMATION);
+                    //changeAnimState(oldAnimState);// AnimState.WALK_ANIMATION);
                 }
                 break;
 
@@ -307,41 +377,6 @@ public class Cat {
                 break;
 
             case DEAD:
-                break;
-        }
-
-
-        switch (animState) {
-            case DEAD_ANIMATION:
-                currentFrame = deadAnimation.getKeyFrame(stateTime, false);
-                break;
-
-            case FALL_ANIMATION:
-                currentFrame = fallAnimation.getKeyFrame(stateTime, false);
-                break;
-
-            case HURT_ANIMATION:
-                currentFrame = hurtAnimation.getKeyFrame(stateTime, false);
-                break;
-
-            case IDLE_ANIMATION:
-                currentFrame = idleAnimation.getKeyFrame(stateTime, true);
-                break;
-
-            case JUMP_ANIMATION:
-                currentFrame = jumpAnimation.getKeyFrame(stateTime, false);
-                break;
-
-            case RUN_ANIMATION:
-                currentFrame = runAnimation.getKeyFrame(stateTime, true);
-                break;
-
-            case SLIDE_ANIMATION:
-                currentFrame = slideAnimation.getKeyFrame(stateTime, true);
-                break;
-
-            case WALK_ANIMATION:
-                currentFrame = walkAnimation.getKeyFrame(stateTime, true);
                 break;
         }
     }
