@@ -10,7 +10,7 @@ import com.badlogic.gdx.utils.Array;
 public class Cat {
     private int fullness = 100;
     private int health = 100;
-    private int hungerSpeed = 1;
+    private int hungerSpeed = 10;
 
     private HealthBar healthBar;
     private HealthBar fullnessBar;
@@ -261,8 +261,13 @@ public class Cat {
     }
 
 
+    public void setCatState(CatState catState) {
+        this.catState = catState;
+    }
 
-
+    public void setFullness(int fullness) {
+        this.fullness = fullness;
+    }
 
     public void update() {
         if(System.currentTimeMillis() > timer + 1000) {
@@ -348,5 +353,13 @@ public class Cat {
 
     public CatState getCatState() {
         return catState;
+    }
+
+    public int getCurrentX() {
+        return currentX;
+    }
+
+    public int getCurrentY() {
+        return currentY;
     }
 }
