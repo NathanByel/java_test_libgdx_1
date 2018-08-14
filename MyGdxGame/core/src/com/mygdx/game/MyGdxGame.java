@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
+import com.mygdx.game.items.HotDog;
 
 import java.util.Random;
 
@@ -14,7 +15,9 @@ public class MyGdxGame extends ApplicationAdapter {
 	SpriteBatch batch;
 	Random rand = new Random();
 
-	Array<Cat> cats = new Array<Cat>();
+	Array<Cat>    cats    = new Array<Cat>();
+    Array<HotDog> hotDogs = new Array<HotDog>();
+
 	long timer = 0;
 
     // Пул для пуль.
@@ -62,6 +65,9 @@ public class MyGdxGame extends ApplicationAdapter {
             if(!oldButtonState) {
                 oldButtonState = true;
 
+                hotDogs.add( new HotDog(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()) );
+
+
                 for (int i = 0; i < cats.size; i++) {
                     if( cats.get(i).isCat(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()) ) {
                         //cats.get(i).setState(Cat.CAT_STATE_DEAD);
@@ -82,7 +88,7 @@ public class MyGdxGame extends ApplicationAdapter {
         }
 
         // Если кот стоит, отправляем его в случайную точку
-        if(System.currentTimeMillis() > timer + 2000) {
+        /*if(System.currentTimeMillis() > timer + 2000) {
             timer = System.currentTimeMillis();
 
             for (int i = 0; i < cats.size; i++) {
@@ -90,9 +96,32 @@ public class MyGdxGame extends ApplicationAdapter {
                     cats.get(i).goTo(rand.nextInt(400), rand.nextInt(400), rand.nextBoolean());
                 }
             }
+        }*/
+        if(hotDogs.size > 0) {
+            HotDog popped;
+            popped = hotDogs.peek();
+
+            for (Cat cat : cats) {
+                if (cat.getCatState() == Cat.CatState.IDLE) {
+                    if ( (cat.getCurrentX() != popped.getCurrentX()) || (cat.getCurrentX() != popped.getCurrentX()) ) {
+                        cat.goTo(popped.getCurrentX(), popped.getCurrentY(), false);
+                    } else {
+                        hotDogs.pop();
+                        cat.setFullness(100);
+                    }
+                }
+            }
+        } else {
+            if(System.currentTimeMillis() > timer + 2000) {
+                timer = System.currentTimeMillis();
+
+                for (int i = 0; i < cats.size; i++) {
+                    if (cats.get(i).getCatState() == Cat.CatState.IDLE) {
+                        cats.get(i).goTo(rand.nextInt(400), rand.nextInt(400), rand.nextBoolean());
+                    }
+                }
+            }
         }
-
-
 
 		Gdx.gl.glClearColor(1, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -100,6 +129,11 @@ public class MyGdxGame extends ApplicationAdapter {
 		for (Cat cat: cats) {
 			cat.render(batch);
 		}
+
+        for (HotDog hotDog: hotDogs) {
+            hotDog.render(batch);
+        }
+
 		batch.end();
 	}
 	
